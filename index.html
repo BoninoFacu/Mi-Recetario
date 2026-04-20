@@ -137,22 +137,6 @@
                 <option value="">Todas las etiquetas</option>
             </select>
 
-            <select class="fsel" id="fStars" onchange="renderGrid()">
-                <option value="">Todas las estrellas</option>
-                <option value="5">
-                    &#9733;&#9733;&#9733;&#9733;&#9733; Solo 5
-                </option>
-                <option value="4">&#9733;&#9733;&#9733;&#9733; (4+)</option>
-                <option value="3">&#9733;&#9733;&#9733; (3+)</option>
-                <option value="2">&#9733;&#9733; (2+)</option>
-                <option value="1">&#9733; (1+)</option>
-            </select>
-
-            <select class="fsel" id="fFav" onchange="renderGrid()">
-                <option value="">Todas</option>
-                <option value="1">&#10084;&#65039; Favoritas</option>
-            </select>
-
             <div
                 id="cookFilter"
                 style="display: flex; gap: 6px; margin-left: 8px"
@@ -184,88 +168,90 @@
         </main>
 
         <!-- HTML: modal para crear o editar una receta. -->
-        <div class="ov" id="formOv" onclick="ovOut(event, 'formOv')">
+        <div class="ov" id="formOv">
             <div class="modal" style="max-width: 720px">
                 <div class="mhd">
                     <h2 id="formTitle">Nueva receta</h2>
                     <button class="xbtn" onclick="close2('formOv')">✕</button>
                 </div>
                 <div class="mbody" oninput="formDirty = true">
-                    <div class="ipreview" id="imgPrev">🍽️</div>
-                    <div class="fg">
-                        <label>URL de foto (opcional)</label>
-                        <input
-                            type="url"
-                            id="fPhoto"
-                            placeholder="https://..."
-                            oninput="previewImg()"
-                        />
-                        <input
-                            type="file"
-                            id="fPhotoFile"
-                            accept="image/*"
-                            onchange="handleImageUpload(event)"
-                        />
-                    </div>
-                    <div class="frow">
-                        <div class="fg" style="flex: 2">
-                            <label>Nombre *</label
-                            ><input
-                                type="text"
-                                id="fName"
-                                placeholder="Ej: Tarta de manzana"
+                    <div class="form-section">
+                        <div class="form-section-title">Información básica</div>
+                        <div class="ipreview" id="imgPrev">🍽️</div>
+                        <div class="fg">
+                            <label>URL de foto (opcional)</label>
+                            <input
+                                type="url"
+                                id="fPhoto"
+                                placeholder="https://..."
+                                oninput="previewImg()"
+                            />
+                            <input
+                                type="file"
+                                id="fPhotoFile"
+                                accept="image/*"
+                                onchange="handleImageUpload(event)"
                             />
                         </div>
-                        <div class="fg">
-                            <label>Categoría</label>
-                            <select id="fCatF">
-                                <option>Desayuno</option>
-                                <option>Almuerzo</option>
-                                <option>Cena</option>
-                                <option>Postre</option>
-                                <option>Snack</option>
-                                <option>Bebida</option>
-                                <option>Otro</option>
-                            </select>
+                        <div class="frow">
+                            <div class="fg" style="flex: 2">
+                                <label>Nombre *</label
+                                ><input
+                                    type="text"
+                                    id="fName"
+                                    placeholder="Ej: Tarta de manzana"
+                                />
+                            </div>
+                            <div class="fg">
+                                <label>Categoría</label>
+                                <select id="fCatF">
+                                    <option>Desayuno</option>
+                                    <option>Almuerzo</option>
+                                    <option>Cena</option>
+                                    <option>Postre</option>
+                                    <option>Snack</option>
+                                    <option>Bebida</option>
+                                    <option>Otro</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="frow">
-                        <div class="fg">
-                            <label>Tiempo (min)</label
-                            ><input
-                                type="number"
-                                id="fTime"
-                                placeholder="45"
-                                min="1"
-                            />
+                        <div class="frow">
+                            <div class="fg">
+                                <label>Tiempo (min)</label
+                                ><input
+                                    type="number"
+                                    id="fTime"
+                                    placeholder="45"
+                                    min="1"
+                                />
+                            </div>
+                            <div class="fg">
+                                <label>Porciones</label
+                                ><input
+                                    type="number"
+                                    id="fPort"
+                                    placeholder="4"
+                                    min="1"
+                                />
+                            </div>
+                            <div class="fg">
+                                <label>Dificultad</label>
+                                <select id="fDiff">
+                                    <option>Fácil</option>
+                                    <option>Media</option>
+                                    <option>Difícil</option>
+                                </select>
+                            </div>
+                            <div class="fg">
+                                <label>Origen / Historia</label
+                                ><input
+                                    type="text"
+                                    id="fOrigin"
+                                    placeholder="Receta de la abuela..."
+                                />
+                            </div>
                         </div>
-                        <div class="fg">
-                            <label>Porciones</label
-                            ><input
-                                type="number"
-                                id="fPort"
-                                placeholder="4"
-                                min="1"
-                            />
-                        </div>
-                        <div class="fg">
-                            <label>Dificultad</label>
-                            <select id="fDiff">
-                                <option>Fácil</option>
-                                <option>Media</option>
-                                <option>Difícil</option>
-                            </select>
-                        </div>
-                        <div class="fg">
-                            <label>Origen / Historia</label
-                            ><input
-                                type="text"
-                                id="fOrigin"
-                                placeholder="Receta de la abuela..."
-                            />
-                        </div>
-                    </div>
-                    <div class="fg">
+                        <div class="fg"></div>
                         <label>Mi calificación</label>
                         <div class="srow" id="starRow">
                             <span onclick="setStar(1)">★</span
@@ -293,52 +279,63 @@
                             />
                         </div>
                     </div>
-                    <div class="fg" style="margin-bottom: 7px">
-                        <label>Ingredientes (arrastrá para reordenar)</label>
-                    </div>
-                    <div id="ingList"></div>
-                    <button class="addingbtn" onclick="addIngRow()">
-                        + Agregar ingrediente
-                    </button>
-                    <div class="fg" style="margin-bottom: 7px">
-                        <label
-                            >Pasos (arrastrá para reordenar — podés poner tiempo
-                            por paso)</label
-                        >
-                    </div>
-                    <div id="stepList"></div>
-                    <button class="addingbtn" onclick="addStepRow()">
-                        + Agregar paso
-                    </button>
-                    <div class="fg">
-                        <label>Notas</label>
-                        <input
-                            type="text"
-                            id="fNotes"
-                            placeholder="Consejos, variaciones..."
-                        />
-                    </div>
-                    <div style="display: flex; gap: 9px; margin-top: 5px">
-                        <button
-                            class="btn btn-danger btn-sm"
-                            onclick="clearHistory()"
-                            style="margin-bottom: 10px"
-                        >
-                            🗑️ Borrar historial de cocción
+                    <div class="form-section">
+                        <div class="form-section-title">Ingredientes</div>
+                        <div class="fg" style="margin-bottom: 7px">
+                            <label
+                                >Ingredientes (arrastrá para reordenar)</label
+                            >
+                        </div>
+                        <div id="ingList"></div>
+                        <button class="addingbtn" onclick="addIngRow()">
+                            + Agregar ingrediente
                         </button>
-                        <button
-                            class="btn btn-primary"
-                            onclick="saveRecipe()"
-                            style="flex: 1"
-                        >
-                            Guardar receta
+                    </div>
+                    <div class="form-section">
+                        <div class="form-section-title">Preparación</div>
+                        <div class="fg" style="margin-bottom: 7px">
+                            <label
+                                >Pasos (arrastrá para reordenar — podés poner
+                                tiempo por paso)</label
+                            >
+                        </div>
+                        <div id="stepList"></div>
+                        <button class="addingbtn" onclick="addStepRow()">
+                            + Agregar paso
                         </button>
-                        <button
-                            class="btn btn-outline"
-                            onclick="close2('formOv')"
-                        >
-                            Cancelar
-                        </button>
+                    </div>
+                    <div class="form-section">
+                        <div class="form-section-title">Notas</div>
+                        <div class="fg">
+                            <label>Notas</label>
+                            <input
+                                type="text"
+                                id="fNotes"
+                                placeholder="Consejos, variaciones..."
+                            />
+                        </div>
+                        <div style="display: flex; gap: 9px; margin-top: 5px">
+                            <button
+                                class="btn btn-danger btn-sm"
+                                onclick="clearHistory()"
+                                style="margin-bottom: 10px"
+                            >
+                                🗑️ Borrar historial de cocción
+                            </button>
+                            <button
+                                class="btn btn-primary"
+                                onclick="saveRecipe()"
+                                style="flex: 1"
+                            >
+                                Guardar receta
+                            </button>
+                            <button
+                                class="btn btn-outline"
+                                onclick="close2('formOv')"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -579,19 +576,6 @@
                 ></select>
 
                 <label style="margin-top: 10px; display: block"
-                    >Cocinadas</label
-                >
-                <select
-                    class="fsel"
-                    id="panelCook"
-                    onchange="applyPanelFilters()"
-                >
-                    <option value="">Todas</option>
-                    <option value="1">Solo cocinadas</option>
-                    <option value="0">No cocinadas</option>
-                </select>
-
-                <label style="margin-top: 10px; display: block"
                     >Favoritas</label
                 >
                 <select
@@ -613,8 +597,6 @@
         <!-- HTML: pie de pagina con estadisticas y accesos auxiliares. -->
         <footer class="app-footer">
             <div class="footer-content" style="position: relative">
-                <span>© <span id="year"></span> Mi recetario</span>
-
                 <span class="footer-sep">•</span>
 
                 <span id="footerStats"></span>
@@ -624,8 +606,23 @@
                 <span id="easterEgg" style="cursor: pointer">🐾</span>
             </div>
         </footer>
-        <!-- HTML: boton flotante para volver arriba. -->
-        <button id="scrollTopBtn">↑</button>
+
+        <!-- MODAL DE CONFIRMACIÓN CUSTOM Reemplaza confirm()  -->
+
+        <div id="confirmModal" class="confirm-modal">
+            <div class="confirm-box">
+                <p id="confirmText">¿Seguro?</p>
+                <div class="confirm-actions">
+                    <button id="confirmCancel" class="btn btn-outline">
+                        Cancelar
+                    </button>
+                    <button id="confirmOk" class="btn btn-danger">
+                        Borrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <script src="utils.js"></script>
         <script src="storage.js"></script>
         <script src="ui.js"></script>

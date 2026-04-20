@@ -167,12 +167,24 @@ function addIngRow(qty = "", unit = "", name = "") {
     const d = document.createElement("div");
     d.className = "ingrow";
     d.draggable = true;
-    d.innerHTML = `<span class="drag-handle" title="Arrastrar">⠿</span>
-                <input type="number" class="qty" placeholder="Cant." value="${qty}" min="0" step="any">
-                <input type="text" class="unit" placeholder="Unidad" value="${unit}">
-                <input type="text" placeholder="Ingrediente *" value="${name}">
-                <button class="rmbtn" onclick="this.parentElement.remove()">✕</button>`;
+    d.innerHTML = `
+                    <span class="drag-handle" title="Arrastrar">⋮⋮</span>
+
+                    <input type="number" class="qty no-drag" placeholder="Cant." value="${qty}" min="0" step="any" onmousedown="event.stopPropagation()">
+
+                    <input type="text" class="unit no-drag" placeholder="Unidad" value="${unit}" onmousedown="event.stopPropagation()">
+
+                    <input type="text" class="no-drag" placeholder="Ingrediente *" value="${name}" onmousedown="event.stopPropagation()">
+
+                    <button class="rmbtn" onclick="this.parentElement.remove()">✕</button>
+        `;
     d.addEventListener("dragstart", (e) => {
+        // ❌ si no es el handle → no arrastra
+        if (!e.target.closest(".drag-handle")) {
+            e.preventDefault();
+            return;
+        }
+
         dragSrc = d;
         e.dataTransfer.effectAllowed = "move";
     });

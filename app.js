@@ -217,18 +217,12 @@ function toggleCooked(id) {
     const r = recipes.find((x) => x.id === id);
     if (!r) return;
 
-    if (!r.cookHistory) r.cookHistory = [];
-
-    if (r.cookHistory.length) {
-        r.cookHistory = [];
-    } else {
-        r.cookHistory.push({
-            date: new Date().toISOString(),
-        });
-    }
+    r.cooked = !r.cooked;
 
     saveLocal();
     renderGrid();
+
+    toast(r.cooked ? "✔ Marcada como cocinada" : "❌ Desmarcada");
 }
 
 let dragSrc = null;
@@ -381,15 +375,16 @@ async function saveRecipe() {
     localStorage.removeItem(LSD);
 }
 
-// Confirma y elimina una receta local y remota.
-
+// Confirma y elimina una receta local y remota usando modal custom.
 async function delRecipe(id) {
-    if (!confirm("¿Eliminar esta receta?")) return;
-    recipes = recipes.filter((r) => r.id !== id);
-    saveLocal();
-    renderGrid();
-    toast("🗑️ Receta eliminada");
-    await pushDelete(id);
+    confirmDelete("¿Eliminar esta receta?", async () => {
+        recipes = recipes.filter((r) => r.id !== id);
+        saveLocal();
+        renderGrid();
+        toast("🗑️ Receta eliminada");
+        s;
+        await pushDelete(id);
+    });
 }
 
 // JS: vista de detalle, porciones, favoritos e historial de coccion.
@@ -1329,9 +1324,10 @@ function updateFilterCount() {
 // Actualiza cantidad total de recetas y recetas cocinadas.
 function updateFooterStats() {
     const total = recipes.length;
-    const cooked = recipes.filter((r) => (r.cookHistory || []).length).length;
+    const cooked = recipes.filter((r) => r && r.cooked === true).length;
     const el = document.getElementById("footerStats");
-    if (el) el.textContent = `${total} recetas • ${cooked} cocinadas`;
+    if (el)
+        el.textContent = `© ${new Date().getFullYear()} Mi recetario • ${total} recetas • ${cooked} cocinadas`;
 }
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -1339,27 +1335,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (yearEl) yearEl.textContent = new Date().getFullYear();
 
     updateFooterStats();
-
-    const scrollBtn = document.getElementById("scrollTopBtn");
-    if (scrollBtn) {
-        window.addEventListener("scroll", () => {
-            scrollBtn.style.display = window.scrollY > 300 ? "block" : "none";
-        });
-        scrollBtn.onclick = () =>
-            window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    const eggEl = document.getElementById("easterEgg");
-    if (eggEl) {
-        eggEl.onclick = () => {
-            const duck = document.createElement("div");
-            duck.textContent = "🦆 Pata ❤️";
-            duck.style.cssText =
-                "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);font-size:1.5rem;background:var(--paper);padding:10px 16px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,0.2);z-index:9999";
-            document.body.appendChild(duck);
-            setTimeout(() => duck.remove(), 2000);
-        };
-    }
 });
 
 // JS: detalle oculto del footer. No afecta datos ni sincronizacion.

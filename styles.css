@@ -1529,3 +1529,89 @@ main {
         font-size: 0.75rem;
     }
 }
+
+/* =========================
+    MODAL DE CONFIRMACIÓN
+    Reemplaza el confirm() nativo
+========================= */
+
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none; /* oculto por defecto */
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.confirm-box {
+    background: var(--bg, white);
+    padding: 20px;
+    border-radius: 12px;
+    width: 280px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.confirm-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+/* =========================
+        INGREDIENTES - MEJOR UX
+========================= */
+
+.ingrow {
+    display: grid;
+    grid-template-columns: 30px 70px 90px 1fr 30px;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.ingrow input {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: var(--tx3);
+    text-align: center;
+}
+
+    .rmbtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #c44;
+    font-size: 1rem;
+}
+
+/* =========================
+    FORMULARIO - SECCIONES
+========================= */
+
+.form-section {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--tx3);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}

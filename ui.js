@@ -5,9 +5,8 @@ function renderGrid() {
         return document.getElementById(id)?.value || "";
     }
 
-    const q = (
-        document.getElementById("searchInput")?.value || ""
-    ).toLowerCase();
+    const q = document.getElementById("searchInput")?.value || "";
+    const qNorm = normalizeText(q);
     const cat = getVal("fCat");
     const tag = getVal("fTag").toLowerCase();
     const minS = parseInt(getVal("fStars")) || 0;
@@ -24,33 +23,29 @@ function renderGrid() {
                 return false;
             if (minS && (r.stars || 0) < minS) return false;
             if (favOnly === "1" && !r.favorite) return false;
-            if (q) {
+            if (qNorm) {
                 const ib = Array.isArray(r.ingredients)
-                    ? r.ingredients
-                          .map((i) => i.name || "")
-                          .join(" ")
-                          .toLowerCase()
+                    ? r.ingredients.map((i) => i.name || "").join(" ")
                     : "";
-                const tb = (r.tags || []).join(" ").toLowerCase();
-                if (
-                    !(
-                        r.name +
-                        r.category +
-                        ib +
-                        r.steps +
-                        r.notes +
-                        tb +
-                        (r.origin || "")
-                    )
-                        .toLowerCase()
-                        .includes(q)
-                )
+
+                const tb = (r.tags || []).join(" ");
+
+                const fullText =
+                    (r.name || "") +
+                    (r.category || "") +
+                    ib +
+                    (r.steps || "") +
+                    (r.notes || "") +
+                    tb +
+                    (r.origin || "");
+
+                if (!normalizeText(fullText).includes(qNorm)) {
                     return false;
+                }
             }
-            if (cookFilter === "1" && !(r.cookHistory || []).length)
-                return false;
-            if (cookFilter === "0" && (r.cookHistory || []).length)
-                return false;
+            if (cookFilter === "1" && r.cooked !== true) return false;
+
+            if (cookFilter === "0" && r.cooked === true) return false;
             return true;
         });
     list.sort((a, b) => {
@@ -80,73 +75,59 @@ function renderGrid() {
     function renderCard(r) {
         return `
     <div class="card" onclick="openView('${r.id}')">
-      <div class="cthumb">
+        <div class="cthumb">
         ${r.photo ? `<img src="${r.photo}" alt="${r.name}" onerror="this.style.display='none'">` : catEmoji(r.category)}
         ${r.favorite ? '<span class="fav-badge">❤️</span>' : ""}
-        ${(r.cookHistory || []).length ? `<span class="cook-count">🍳 ×${r.cookHistory.length}</span>` : ""}
-      </div>
-      <div class="cbody">
-        <div class="ctags">
-          <span class="tag tag-cat">${r.category}</span>
-          ${(r.tags || [])
-              .slice(0, 2)
-              .map((t) => `<span class="tag tag-custom">${t}</span>`)
-              .join("")}
+        ${
+            r.cookHistory?.length > 0
+                ? `<span class="cook-count">🍳 ×${r.cookHistory.length}</span>`
+                : ""
+        }
         </div>
-        <div class="cname">${r.name}</div>
-        <div class="cmeta">
-${r.time ? `<span>⏱ ${r.time}m</span>` : ""}
-${r.portions ? `<span>👥 ${r.portions}</span>` : ""}
-<span>🎯 ${r.difficulty || "Media"}</span>
-        </div>
-        ${starsHtml(r.stars)}
-<div class="cfoot">
-    <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openEdit('${r.id}')">✏️</button>
-    <button class="btn btn-gold btn-sm" onclick="event.stopPropagation();startCookMode('${r.id}')">👨‍🍳</button>
-    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();delRecipe('${r.id}')">🗑️</button>
-    <button
-            onclick="event.stopPropagation();toggleCooked('${r.id}')"
-            style="
-                margin-left:auto;
-                width:36px;
-                height:36px;
-                border-radius:10px;
-                border:1px solid ${(r.cookHistory || []).length ? "#4caf50" : "#ccc"};
-                background:${(r.cookHistory || []).length ? "#4caf50" : "transparent"};
-                color:${(r.cookHistory || []).length ? "white" : "#555"};
-                font-weight:bold;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                cursor:pointer;
-            "
-            >
-            ${(r.cookHistory || []).length ? "✔" : "▢"}
-    </button>
-</div>
+        <div class="cbody">
+            <div class="ctags">
+                <span class="tag tag-cat">${r.category}</span>
+                ${(r.tags || [])
+                    .slice(0, 2)
+                    .map((t) => `<span class="tag tag-custom">${t}</span>`)
+                    .join("")}
+            </div>
+            <div class="cname">${r.name}</div>
+            <div class="cmeta">
+                    ${r.time ? `<span>⏱ ${r.time}m</span>` : ""}
+                    ${r.portions ? `<span>👥 ${r.portions}</span>` : ""}
+                    <span>🎯 ${r.difficulty || "Media"}</span>
+            </div>
+                ${starsHtml(r.stars)}
+            <div class="cfoot">
+                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openEdit('${r.id}')">✏️</button>
+                <button class="btn btn-gold btn-sm" onclick="event.stopPropagation();startCookMode('${r.id}')">👨‍🍳</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();delRecipe('${r.id}')">🗑️</button>
+                <button
+                        onclick="event.stopPropagation();toggleCooked('${r.id}')"
+                        style="
+                            margin-left:auto;
+                            width:36px;
+                            height:36px;
+                            border-radius:10px;
+                            border:1px solid ${r.cooked ? "#4caf50" : "#ccc"};
+                            background:${r.cooked ? "#4caf50" : "transparent"};
+                            color:${(r.cookHistory || []).length ? "white" : "#555"};
+                            font-weight:bold;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            cursor:pointer;
+                        "
+                        >
+                        ${r.cooked ? "✔" : "▢"}
+                </button>
+            </div>
         </div>
     </div>`;
     }
 
-    let html = "";
-
-    if (favs.length) {
-        html += `
-    <div style="grid-column:1/-1; margin-bottom:10px;">
-        <h3 style="font-family:'Inter',serif; font-size:1.1rem;">❤️ Favoritas</h3>
-    </div>
-    ${favs.map(renderCard).join("")}
-    `;
-    }
-
-    if (normal.length) {
-        html += `
-    <div style="grid-column:1/-1; margin:10px 0;">
-        <h3 style="font-family:'Inter',serif; font-size:1.1rem;">📖 Todas</h3>
-    </div>
-    ${normal.map(renderCard).join("")}
-    `;
-    }
+    let html = list.map(renderCard).join("");
 
     grid.innerHTML = html;
     updateFilterCount();

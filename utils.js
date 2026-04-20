@@ -97,3 +97,44 @@ function normalizeUnit(qty, unit) {
 
     return { qty, unit };
 }
+
+function normalizeText(str) {
+    return (str || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+}
+
+/* =========================
+    MODAL DE CONFIRMACIÓN CUSTOM
+    Reemplaza confirm()
+========================= */
+
+function confirmDelete(message, onConfirm) {
+    const modal = document.getElementById("confirmModal");
+    const text = document.getElementById("confirmText");
+    const ok = document.getElementById("confirmOk");
+    const cancel = document.getElementById("confirmCancel");
+
+    // setea el texto del modal
+    text.textContent = message;
+
+    // muestra el modal
+    modal.style.display = "flex";
+
+    // limpia eventos para evitar duplicados
+    function clean() {
+        modal.style.display = "none";
+        ok.onclick = null;
+        cancel.onclick = null;
+    }
+
+    // botón confirmar
+    ok.onclick = () => {
+        clean();
+        onConfirm();
+    };
+
+    // botón cancelar
+    cancel.onclick = clean;
+}
