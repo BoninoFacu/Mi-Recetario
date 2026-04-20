@@ -1,0 +1,17 @@
+﻿# Editor / sistema
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Variables sensibles (por si agregás en el futuro)
+.env
+
+# Node (por si escalás el proyecto)
+node_modules/
+
+# Archivos temporales
+*.tmp
+*.temp
