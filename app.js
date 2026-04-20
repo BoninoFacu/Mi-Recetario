@@ -129,17 +129,7 @@ function setSync(state, txt) {
     document.getElementById("syncDot").className = "dot " + state;
     document.getElementById("syncTxt").textContent = txt;
 }
-// Guarda la URL del Apps Script y lanza la primera carga remota.
-async function connectSheet() {
-    const url = document.getElementById("sheetUrlInput").value.trim();
-    if (!url) {
-        toast("⚠️ Pegá la URL primero");
-        return;
-    }
-    sheetUrl = url;
-    localStorage.setItem(LSU, url);
-    await loadSheet();
-}
+
 // Trae recetas del Sheet y las fusiona con los datos locales.
 async function loadSheet() {
     if (!sheetUrl) return;
@@ -157,7 +147,10 @@ async function loadSheet() {
         const localMap = {};
         local.forEach((r) => (localMap[r.id] = r));
 
-        const allIds = new Set([...Object.keys(sheetMap), ...Object.keys(localMap)]);
+        const allIds = new Set([
+            ...Object.keys(sheetMap),
+            ...Object.keys(localMap),
+        ]);
         const merged = [];
         const localOnly = [];
 
@@ -165,7 +158,9 @@ async function loadSheet() {
             const sr = sheetMap[id];
             const lr = localMap[id];
             if (sr && lr) {
-                merged.push((lr.updatedAt || 0) > (sr.updatedAt || 0) ? lr : sr);
+                merged.push(
+                    (lr.updatedAt || 0) > (sr.updatedAt || 0) ? lr : sr,
+                );
             } else if (sr) {
                 merged.push(sr);
             } else {
@@ -200,38 +195,7 @@ async function loadSheet() {
         }
     }
 }
-// Envia una receta al Sheet sin bloquear el guardado local.
-async function pushSave(r) {
-    if (!sheetUrl) return;
 
-    r.updatedAt = r.updatedAt || Date.now();
-    setSync("spin", "Guardando...");
-    try {
-        await fetch(sheetUrl, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "save", recipe: r }),
-        });
-        setSync("ok", "Guardado ✓");
-    } catch (e) {
-        console.error("pushSave error:", e);
-        setSync("err", "Error al guardar");
-        toast("⚠️ No se pudo guardar en el sheet", "error");
-    }
-}
-// Borra una receta del Sheet cuando hay sincronizacion activa.
-async function pushDelete(id) {
-    if (!sheetUrl) return;
-    try {
-        await fetch(sheetUrl, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete", id }),
-        });
-    } catch {}
-}
 // Marca el banner como conectado y oculta la configuracion inicial.
 function markBannerOk() {
     const b = document.getElementById("setupBanner");
@@ -245,169 +209,6 @@ function disconnectSheet() {
     sheetUrl = "";
     localStorage.removeItem(LSU);
     location.reload();
-}
-
-// JS: helpers de formato usados por varias vistas.
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-const catEmoji = (c) =>
-    ({
-        Desayuno: "☕",
-        Almuerzo: "🥗",
-        Cena: "🍽️",
-        Postre: "🍰",
-        Snack: "🥨",
-        Bebida: "🥤",
-        Otro: "🍴",
-    })[c] || "🍴";
-const starsHtml = (n, size = "") =>
-    `<span class="stars" ${size ? `style="font-size:${size}"` : ""}>${"★".repeat(n || 0)}${"☆".repeat(5 - (n || 0))}</span>`;
-
-// JS: render de tarjetas, busqueda y filtros principales.
-// Construye la grilla visible aplicando busqueda, filtros y orden manual.
-function renderGrid() {
-    function getVal(id) {
-        return document.getElementById(id)?.value || "";
-    }
-
-    const q = (document.getElementById("searchInput")?.value || "").toLowerCase();
-    const cat = getVal("fCat");
-    const tag = getVal("fTag").toLowerCase();
-    const minS = parseInt(getVal("fStars")) || 0;
-    const favOnly = getVal("fFav");
-
-    const list = [...recipes]
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .filter((r) => {
-            if (cat && r.category !== cat) return false;
-            if (tag && !(r.tags || []).some((t) => (t || "").toLowerCase() === tag))
-                return false;
-            if (minS && (r.stars || 0) < minS) return false;
-            if (favOnly === "1" && !r.favorite) return false;
-            if (q) {
-                const ib = Array.isArray(r.ingredients)
-                    ? r.ingredients
-                          .map((i) => i.name || "")
-                          .join(" ")
-                          .toLowerCase()
-                    : "";
-                const tb = (r.tags || []).join(" ").toLowerCase();
-                if (
-                    !(
-                        r.name +
-                        r.category +
-                        ib +
-                        r.steps +
-                        r.notes +
-                        tb +
-                        (r.origin || "")
-                    )
-                        .toLowerCase()
-                        .includes(q)
-                )
-                    return false;
-            }
-            if (cookFilter === "1" && !(r.cookHistory || []).length) return false;
-            if (cookFilter === "0" && (r.cookHistory || []).length) return false;
-            return true;
-        });
-    list.sort((a, b) => {
-        if (a.favorite !== b.favorite) {
-            return b.favorite - a.favorite;
-        }
-        return (b.stars || 0) - (a.stars || 0);
-    });
-
-    document.getElementById("countPill").textContent =
-        list.length + " receta" + (list.length !== 1 ? "s" : "");
-    const csBtn = document.getElementById("clearSearch");
-    if (csBtn) csBtn.style.display = q ? "block" : "none";
-    refreshTagSelect();
-
-    const grid = document.getElementById("grid");
-    if (!list.length) {
-        grid.innerHTML = `<div class="empty"><div class="ei">${recipes.length ? "🔍" : "🍳"}</div>
-                  <h3>${recipes.length ? "Sin resultados" : "¡Tu recetario está vacío!"}</h3>
-                  <p style="font-size:.86rem;margin-top:5px">${recipes.length ? "Probá otros filtros." : "Agregá tu primera receta arriba."}</p></div>`;
-        return;
-    }
-
-    const favs = list.filter((r) => r.favorite);
-    const normal = list.filter((r) => !r.favorite);
-
-    function renderCard(r) {
-        return `
-    <div class="card" onclick="openView('${r.id}')">
-      <div class="cthumb">
-        ${r.photo ? `<img src="${r.photo}" alt="${r.name}" onerror="this.style.display='none'">` : catEmoji(r.category)}
-        ${r.favorite ? '<span class="fav-badge">❤️</span>' : ""}
-        ${(r.cookHistory || []).length ? `<span class="cook-count">🍳 ×${r.cookHistory.length}</span>` : ""}
-      </div>
-      <div class="cbody">
-        <div class="ctags">
-          <span class="tag tag-cat">${r.category}</span>
-          ${(r.tags || [])
-  .slice(0, 2)
-  .map((t) => `<span class="tag tag-custom">${t}</span>`)
-  .join("")}
-        </div>
-        <div class="cname">${r.name}</div>
-        <div class="cmeta">
-${r.time ? `<span>⏱ ${r.time}m</span>` : ""}
-${r.portions ? `<span>👥 ${r.portions}</span>` : ""}
-<span>🎯 ${r.difficulty || "Media"}</span>
-        </div>
-        ${starsHtml(r.stars)}
-<div class="cfoot">
-    <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openEdit('${r.id}')">✏️</button>
-    <button class="btn btn-gold btn-sm" onclick="event.stopPropagation();startCookMode('${r.id}')">👨‍🍳</button>
-    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();delRecipe('${r.id}')">🗑️</button>
-    <button
-            onclick="event.stopPropagation();toggleCooked('${r.id}')"
-            style="
-                margin-left:auto;
-                width:36px;
-                height:36px;
-                border-radius:10px;
-                border:1px solid ${(r.cookHistory || []).length ? "#4caf50" : "#ccc"};
-                background:${(r.cookHistory || []).length ? "#4caf50" : "transparent"};
-                color:${(r.cookHistory || []).length ? "white" : "#555"};
-                font-weight:bold;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                cursor:pointer;
-            "
-            >
-            ${(r.cookHistory || []).length ? "✔" : "▢"}
-    </button>
-</div>
-        </div>
-    </div>`;
-    }
-
-    let html = "";
-
-    if (favs.length) {
-        html += `
-    <div style="grid-column:1/-1; margin-bottom:10px;">
-        <h3 style="font-family:'Inter',serif; font-size:1.1rem;">❤️ Favoritas</h3>
-    </div>
-    ${favs.map(renderCard).join("")}
-    `;
-    }
-
-    if (normal.length) {
-        html += `
-    <div style="grid-column:1/-1; margin:10px 0;">
-        <h3 style="font-family:'Inter',serif; font-size:1.1rem;">📖 Todas</h3>
-    </div>
-    ${normal.map(renderCard).join("")}
-    `;
-    }
-
-    grid.innerHTML = html;
-    updateFilterCount();
-    updateFooterStats();
 }
 
 // Marca o desmarca una receta como cocinada desde la tarjeta.
@@ -430,178 +231,11 @@ function toggleCooked(id) {
     renderGrid();
 }
 
-// Regenera el selector de etiquetas segun las recetas existentes.
-
-function refreshTagSelect() {
-    const all = new Set();
-    recipes.forEach((r) => (r.tags || []).forEach((t) => all.add(t.toLowerCase())));
-    const sel = document.getElementById("fTag");
-    const cur = sel ? sel.value : "";
-    sel.innerHTML =
-        '<option value="">Todas las etiquetas</option>' +
-        [...all]
-            .sort()
-            .map(
-                (t) =>
-                    `<option ${t === cur ? "selected" : ""} value="${t}">
-  ${t
-      .split(" ")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ")}
-</option>`,
-            )
-            .join("");
-}
-
-// JS: formulario de recetas, ingredientes, pasos, tags e imagen.
-// Abre el modal para crear una receta nueva.
-function openAdd() {
-    editId = null;
-    curStars = 0;
-    curTags = [];
-    document.getElementById("formTitle").textContent = "Nueva receta";
-    ["fName", "fTime", "fPort", "fNotes", "fPhoto", "fOrigin"].forEach(
-        (id) => (document.getElementById(id).value = ""),
-    );
-    document.getElementById("fCatF").value = "Desayuno";
-    document.getElementById("fDiff").value = "Fácil";
-    document.getElementById("imgPrev").innerHTML = "🍽️";
-    document.getElementById("ingList").innerHTML = "";
-    document.getElementById("stepList").innerHTML = "";
-    renderTagChips();
-    updateStars();
-    addIngRow();
-    addIngRow();
-    addIngRow();
-    addStepRow();
-    open2("formOv");
-    const draft = JSON.parse(localStorage.getItem(LSD) || "null");
-
-    if (draft) {
-        document.getElementById("fName").value = draft.name || "";
-        document.getElementById("fTime").value = draft.time || "";
-        document.getElementById("fPort").value = draft.portions || "";
-        document.getElementById("fNotes").value = draft.notes || "";
-        document.getElementById("fPhoto").value = draft.photo || "";
-        document.getElementById("fOrigin").value = draft.origin || "";
-        document.getElementById("fCatF").value = draft.category || "Desayuno";
-        document.getElementById("fDiff").value = draft.difficulty || "Fácil";
-
-        curStars = draft.stars || 0;
-        curTags = draft.tags || [];
-
-        updateStars();
-        renderTagChips();
-        previewImg();
-    }
-    formDirty = false;
-}
-
-// Carga una receta existente dentro del formulario de edicion.
-
-function openEdit(id) {
-    const r = recipes.find((x) => x.id === id);
-    if (!r) return;
-    editId = id;
-    curStars = r.stars || 0;
-    curTags = [...(r.tags || [])];
-    document.getElementById("formTitle").textContent = "Editar receta";
-    document.getElementById("fName").value = r.name;
-    document.getElementById("fTime").value = r.time || "";
-    document.getElementById("fPort").value = r.portions || "";
-    document.getElementById("fNotes").value = r.notes || "";
-    document.getElementById("fPhoto").value = r.photo || "";
-    document.getElementById("fOrigin").value = r.origin || "";
-    document.getElementById("fCatF").value = r.category || "Otro";
-    document.getElementById("fDiff").value = r.difficulty || "Media";
-    document.getElementById("ingList").innerHTML = "";
-    (r.ingredients || []).forEach((i) => addIngRow(i.qty, i.unit, i.name));
-    if (!(r.ingredients || []).length) addIngRow();
-    document.getElementById("stepList").innerHTML = "";
-    normalizeSteps(r.steps).forEach((s) => addStepRow(s.text, s.timer));
-    if (!(r.steps || []).length) addStepRow();
-    renderTagChips();
-    previewImg();
-    updateStars();
-    open2("formOv");
-    formDirty = false;
-}
-
 let dragSrc = null;
-// Agrega una fila editable de ingrediente con drag and drop.
-function addIngRow(qty = "", unit = "", name = "") {
-    const d = document.createElement("div");
-    d.className = "ingrow";
-    d.draggable = true;
-    d.innerHTML = `<span class="drag-handle" title="Arrastrar">⠿</span>
-                <input type="number" class="qty" placeholder="Cant." value="${qty}" min="0" step="any">
-                <input type="text" class="unit" placeholder="Unidad" value="${unit}">
-                <input type="text" placeholder="Ingrediente *" value="${name}">
-                <button class="rmbtn" onclick="this.parentElement.remove()">✕</button>`;
-    d.addEventListener("dragstart", (e) => {
-        dragSrc = d;
-        e.dataTransfer.effectAllowed = "move";
-    });
-    d.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        d.classList.add("drag-over");
-    });
-    d.addEventListener("dragleave", () => d.classList.remove("drag-over"));
-    d.addEventListener("drop", (e) => {
-        e.preventDefault();
-        d.classList.remove("drag-over");
-        if (dragSrc && dragSrc !== d) {
-            const p = d.parentNode;
-            const items = [...p.children];
-            const si = items.indexOf(dragSrc),
-                di = items.indexOf(d);
-            if (si < di) p.insertBefore(dragSrc, d.nextSibling);
-            else p.insertBefore(dragSrc, d);
-        }
-    });
-    document.getElementById("ingList").appendChild(d);
-}
 
 let dragStepSrc = null;
 let stepCounter = 0;
-// Agrega una fila editable de paso con timer opcional.
-function addStepRow(text = "", timer = "") {
-    stepCounter++;
-    const d = document.createElement("div");
-    d.className = "steprow";
-    d.draggable = true;
-    d.innerHTML = `<span class="drag-handle">⠿</span>
-                <div style="flex:1">
-                  <textarea placeholder="Describe este paso..." style="width:100%;min-height:56px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:.87rem;color:var(--tx);background:var(--bg);outline:none;resize:vertical">${text}</textarea>
-                  <div class="step-time-wrap">
-                    <input type="number" placeholder="0" value="${timer}" min="0" style="max-width:68px;padding:5px 9px;border:1.5px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:.82rem;color:var(--tx);background:var(--bg);outline:none">
-                    <label>min de timer</label>
-                  </div>
-                </div>
-                <button class="rmbtn" style="margin-top:8px" onclick="this.parentElement.remove();reindexSteps()">✕</button>`;
-    d.addEventListener("dragstart", (e) => {
-        dragStepSrc = d;
-        e.dataTransfer.effectAllowed = "move";
-    });
-    d.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        d.classList.add("drag-over");
-    });
-    d.addEventListener("dragleave", () => d.classList.remove("drag-over"));
-    d.addEventListener("drop", (e) => {
-        e.preventDefault();
-        d.classList.remove("drag-over");
-        if (dragStepSrc && dragStepSrc !== d) {
-            const p = d.parentNode;
-            const items = [...p.children];
-            const si = items.indexOf(dragStepSrc),
-                di = items.indexOf(d);
-            if (si < di) p.insertBefore(dragStepSrc, d.nextSibling);
-            else p.insertBefore(dragStepSrc, d);
-        }
-    });
-    document.getElementById("stepList").appendChild(d);
-}
+
 // Hook reservado para renumerar pasos si se agregan indices visibles.
 function reindexSteps() {}
 
@@ -714,7 +348,9 @@ async function saveRecipe() {
         origin: document.getElementById("fOrigin").value.trim(),
         tags: [
             ...new Set(
-                (curTags || []).map((t) => t.toLowerCase().trim()).filter(Boolean),
+                (curTags || [])
+                    .map((t) => t.toLowerCase().trim())
+                    .filter(Boolean),
             ),
         ],
         ingredients,
@@ -756,12 +392,6 @@ async function delRecipe(id) {
     await pushDelete(id);
 }
 
-// Persiste recetas en localStorage y refresca datos derivados.
-
-function saveLocal() {
-    localStorage.setItem(LS, JSON.stringify(recipes));
-}
-
 // JS: vista de detalle, porciones, favoritos e historial de coccion.
 // Abre el modal de detalle de una receta.
 function openView(id) {
@@ -770,7 +400,8 @@ function openView(id) {
     vId = id;
     vPort = r.portions || 4;
     vActiveTab = getDefaultViewTab(r);
-    document.getElementById("vTitle").textContent = catEmoji(r.category) + " " + r.name;
+    document.getElementById("vTitle").textContent =
+        catEmoji(r.category) + " " + r.name;
     renderView(r);
     open2("viewOv");
 }
@@ -794,194 +425,6 @@ function switchViewTab(tab) {
     document
         .querySelectorAll(".view-panel")
         .forEach((p) => p.classList.toggle("active", p.dataset.panel === tab));
-}
-
-// Renderiza hero, tabs, ingredientes, pasos e historial.
-
-function renderView(r) {
-    const ratio = vPort / (r.portions || 4);
-    const steps = normalizeSteps(r.steps || []);
-    const hasIng = (r.ingredients || []).length > 0;
-    const hasSteps = steps.length > 0;
-    const hasHistory = (r.cookHistory || []).length > 0;
-
-    const thumbHtml = r.photo
-        ? `<div class="thumb"><img src="${r.photo}" alt="${r.name}" onerror="this.parentElement.innerHTML='${catEmoji(r.category)}'"></div>`
-        : `<div class="thumb">${catEmoji(r.category)}</div>`;
-
-    const heroHtml = `
-        <div class="vhero-compact">
-            ${thumbHtml}
-            <div class="info">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
-                    <div>${starsHtml(r.stars, ".95rem")}</div>
-                    <button style="background:none;border:none;font-size:1.3rem;cursor:pointer;padding:0;line-height:1" onclick="toggleFav('${r.id}')" title="${r.favorite ? "Quitar favorita" : "Marcar favorita"}">${r.favorite ? "❤️" : "🤍"}</button>
-                </div>
-                <div class="vmeta-row" style="margin-top:6px">
-                    ${r.time ? `<span class="vmeta-chip">⏱ ${r.time}m</span>` : ""}
-                    <span class="vmeta-chip">👥 ${r.portions || 4}</span>
-                    <span class="vmeta-chip">🎯 ${r.difficulty || "Media"}</span>
-                    ${hasHistory ? `<span class="vmeta-chip">🍳 ×${r.cookHistory.length}</span>` : ""}
-                </div>
-                ${r.origin ? `<div style="font-size:.75rem;color:var(--tx3);margin-top:3px">📍 ${r.origin}</div>` : ""}
-                ${(r.tags || []).length ? `<div class="vtags" style="margin-top:6px">${r.tags.map((t) => `<span class="tag tag-custom">${t}</span>`).join("")}</div>` : ""}
-            </div>
-        </div>`;
-
-    const tabs = [
-        hasIng ? { id: "ing", label: "🥗 Ingredientes" } : null,
-        hasSteps ? { id: "steps", label: "👨‍🍳 Preparación" } : null,
-        hasHistory ? { id: "hist", label: "📅 Historial" } : null,
-        { id: "info", label: "ℹ️ Info" },
-    ].filter(Boolean);
-
-    if (!tabs.some((t) => t.id === vActiveTab)) vActiveTab = tabs[0].id;
-
-    const tabBar = `<div class="view-tabs">${tabs
-        .map(
-            (t) =>
-                `<button class="view-tab${vActiveTab === t.id ? " active" : ""}" data-tab="${t.id}" onclick="switchViewTab('${t.id}')">${t.label}</button>`,
-        )
-        .join("")}</div>`;
-
-    const panelInfo = `<div class="view-panel${vActiveTab === "info" ? " active" : ""}" data-panel="info">
-        ${
-            r.notes
-                ? `<div class="notesbox">📝 ${r.notes}</div>`
-                : `<div class="empty-info">No hay información.</div>`
-        }
-    </div>`;
-
-    const panelIng = hasIng
-        ? `<div class="view-panel${vActiveTab === "ing" ? " active" : ""}" data-panel="ing">
-        <div class="pctrl">
-            <button onclick="chgPort(-1)">−</button>
-            <span>👥 ${vPort} porción${vPort !== 1 ? "es" : ""}</span>
-            <button onclick="chgPort(1)">+</button>
-        </div>
-        <ul class="inglist">${r.ingredients
-            .map((i) => {
-                let q = "";
-                if (i.qty) {
-                    const v = i.qty * ratio;
-                    q = (Number.isInteger(v) ? v : +v.toFixed(2)) + " ";
-                }
-                return `<li>${q}${i.unit ? i.unit + " " : ""}<strong>${i.name}</strong></li>`;
-            })
-            .join("")}</ul>
-    </div>`
-        : "";
-
-    const panelSteps = hasSteps
-        ? `<div class="view-panel${vActiveTab === "steps" ? " active" : ""}" data-panel="steps">
-        ${steps
-            .map(
-                (s, idx) => `
-            <div class="vstep">
-                <div class="vstep-num">${idx + 1}</div>
-                <div class="vstep-body">
-                    <div>${s.text}</div>
-                    ${s.timer ? `<div class="vstep-timer"><button class="timer-btn" id="tbtn_${vId}_${idx}" onclick="toggleTimer('${vId}',${idx},${s.timer})">⏱ ${s.timer} min</button><span class="timer-display" id="tdisp_${vId}_${idx}"></span></div>` : ""}
-                </div>
-            </div>`,
-            )
-            .join("")}
-    </div>`
-        : "";
-
-    const panelHist = hasHistory
-        ? `<div class="view-panel${vActiveTab === "hist" ? " active" : ""}" data-panel="hist">
-        <div class="cooklog">
-            ${r.cookHistory
-                .slice(-10)
-                .reverse()
-                .map((item, idx) => {
-                    const date = item.date || item;
-                    return `<div class="cooklog-item">
-                    <div>
-                        <span>🍳 ${new Date(date).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
-                        ${item.note ? `<div style="font-size:.75rem;color:var(--tx3)">📝 ${item.note}</div>` : ""}
-                    </div>
-                    <button class="rmbtn" onclick="removeCook('${r.id}', ${idx})">✕</button>
-                </div>`;
-                })
-                .join("")}
-        </div>
-    </div>`
-        : "";
-
-    const viewActions = `<div class="view-actions">
-        <button class="btn btn-gold btn-sm" onclick="close2('viewOv');startCookMode('${r.id}')">👨‍🍳 Modo cocina</button>
-        <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}');close2('viewOv')">✏️ Editar</button>
-        <button class="btn btn-green btn-sm" onclick="openPanel();close2('viewOv')">🛒 Lista compras</button>
-        <button class="btn btn-outline btn-sm" onclick="logCook('${r.id}')">✅ Cocinada hoy</button>
-        <button class="btn btn-outline btn-sm" onclick="printRecipe('${r.id}')">🖨️ Imprimir</button>
-    </div>`;
-
-    document.getElementById("vBody").innerHTML =
-        heroHtml + tabBar + panelIng + panelSteps + panelHist + panelInfo + viewActions;
-}
-
-// JS: normalizacion defensiva de pasos guardados o escritos manualmente.
-// Convierte pasos viejos a un formato uniforme.
-function normalizeSteps(steps) {
-    if (!steps) return [];
-
-    if (typeof steps === "string") {
-        return steps
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .map((s) => ({ text: s, timer: 0 }));
-    }
-
-    if (!Array.isArray(steps)) {
-        try {
-            if (typeof steps === "object") {
-                return Object.values(steps)
-                    .map((s) => String(s).trim())
-                    .filter(Boolean)
-                    .map((s) => ({ text: s, timer: 0 }));
-            }
-            return [];
-        } catch {
-            return [];
-        }
-    }
-
-    return steps.flatMap((s) => {
-        if (!s) return [];
-
-        if (typeof s === "string") {
-            return s
-                .split("\n")
-                .map((t) => t.trim())
-                .filter(Boolean)
-                .map((t) => ({ text: t, timer: 0 }));
-        }
-
-        if (typeof s === "object") {
-            if (s.text && s.text.includes("\n")) {
-                return s.text
-                    .split("\n")
-                    .map((t) => t.trim())
-                    .filter(Boolean)
-                    .map((t) => ({
-                        text: t,
-                        timer: s.timer || 0,
-                    }));
-            }
-
-            return [
-                {
-                    text: (s.text || "").toString().trim(),
-                    timer: s.timer || 0,
-                },
-            ];
-        }
-
-        return [];
-    });
 }
 
 // Ajusta porciones y recalcula cantidades visibles.
@@ -1075,7 +518,8 @@ function startCookMode(id) {
     cmStepIdx = 0;
     document.getElementById("cmTitle").textContent = r.name;
 
-    if (navigator.wakeLock) navigator.wakeLock.request("screen").catch(() => {});
+    if (navigator.wakeLock)
+        navigator.wakeLock.request("screen").catch(() => {});
     renderCookStep();
     document.getElementById("cookMode").classList.add("open");
     document.getElementById("cmBody").onclick = (e) => {
@@ -1314,32 +758,12 @@ function getIngCategory(name) {
     }
     return "otros";
 }
-// Normaliza cantidades grandes como gramos a kilos o mililitros a litros.
-function normalizeUnit(qty, unit) {
-    if (!qty) return { qty, unit };
-
-    const u = unit.toLowerCase();
-
-    if (u === "gr" || u === "g") {
-        if (qty >= 1000) {
-            return { qty: (qty / 1000).toFixed(2), unit: "kg" };
-        }
-        return { qty, unit: "gr" };
-    }
-
-    if (u === "ml") {
-        if (qty >= 1000) {
-            return { qty: (qty / 1000).toFixed(2), unit: "L" };
-        }
-        return { qty, unit: "ml" };
-    }
-
-    return { qty, unit };
-}
 
 // Devuelve las recetas que alimentan la lista de compras actual.
 function getShopRecipes() {
-    const search = (document.getElementById("shopSearch")?.value || "").toLowerCase();
+    const search = (
+        document.getElementById("shopSearch")?.value || ""
+    ).toLowerCase();
     const base = selectedRecipes.length
         ? recipes.filter((r) => selectedRecipes.includes(r.id))
         : recipes;
@@ -1383,7 +807,8 @@ function getShopShareTitle(sourceRecipes) {
     const isAllRecipes = !selectedRecipes.length && !search;
 
     if (isAllRecipes) return "🛒 *Lista de compras - Todas las recetas*";
-    if (sourceRecipes.length === 1) return `🛒 *Compras para ${sourceRecipes[0].name}*`;
+    if (sourceRecipes.length === 1)
+        return `🛒 *Compras para ${sourceRecipes[0].name}*`;
 
     return [
         "🛒 *Compras para:*",
@@ -1484,7 +909,9 @@ function showHelp() {
 }
 // Copia el Apps Script al portapapeles.
 function copyScript() {
-    navigator.clipboard.writeText(SCRIPT).then(() => toast("📋 Script copiado"));
+    navigator.clipboard
+        .writeText(SCRIPT)
+        .then(() => toast("📋 Script copiado"));
 }
 
 // Abre un overlay y configura cierre por gesto tactil.
@@ -1555,7 +982,8 @@ function printRecipe(id) {
     if (!r) return;
     const steps = normalizeSteps(r.steps || []);
     const win = window.open("", "_blank");
-    win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+    win.document
+        .write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     <title>${r.name}</title>
     <style>
         body{font-family:Georgia,serif;max-width:680px;margin:40px auto;padding:0 20px;color:#1e1209}
@@ -1704,7 +1132,8 @@ function handleImageUpload(e) {
 
         document.getElementById("fPhoto").value = base64;
 
-        document.getElementById("imgPrev").innerHTML = `<img src="${base64}" alt="">`;
+        document.getElementById("imgPrev").innerHTML =
+            `<img src="${base64}" alt="">`;
     };
 
     reader.readAsDataURL(file);
@@ -1916,7 +1345,8 @@ window.addEventListener("DOMContentLoaded", () => {
         window.addEventListener("scroll", () => {
             scrollBtn.style.display = window.scrollY > 300 ? "block" : "none";
         });
-        scrollBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
+        scrollBtn.onclick = () =>
+            window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     const eggEl = document.getElementById("easterEgg");
